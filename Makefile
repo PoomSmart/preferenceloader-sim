@@ -25,6 +25,14 @@ PreferenceLoader_LDFLAGS = -L$(THEOS_OBJ_DIR)
 include $(THEOS_MAKE_PATH)/library.mk
 include $(THEOS_MAKE_PATH)/tweak.mk
 
+# Here, PreferenceLoader is expected to be linked against `$(THEOS_OBJ_DIR)/libprefs.dylib`,
+# however a linker tries to use `$THEOS/vendor/lib/libprefs.tbd`,
+# and it fails because `libprefs.tbd` in theos is not built for x86_64.
+# This happens because theos internally set "$THEOS/vendor/lib" as a search dir,
+# and `PreferenceLoader_LDFLAGS` has lower priority than that.
+# In this hack, we force the linker to search `$THEOS_OBJ_DIR` first by setting `$TARGET_LD`.
+TARGET_LD := $(TARGET_LD) -L$(THEOS_OBJ_DIR)
+
 include locatesim.mk
 
 setup:: all
