@@ -70,7 +70,7 @@ static BOOL _Firmware_lt_60 = NO;
         PSSpecifier *specifier = [self specifier];
         if (!specifier) {
             NSString *errorText = @"There appears to have been an error restoring these preferences!";
-            return _specifiers = [[NSArray alloc] initWithArray:generateErrorSpecifiersWithText(errorText)];
+            return _specifiers = [generateErrorSpecifiersWithText(errorText) mutableCopy];
         }
         NSString *alternatePlistName = [specifier propertyForKey:PLAlternatePlistNameKey];
         if (alternatePlistName)
@@ -80,7 +80,7 @@ static BOOL _Firmware_lt_60 = NO;
         if (!_specifiers || [_specifiers count] == 0) {
             [_specifiers release];
             NSString *errorText = @"There appears to be an error with these preferences!";
-            _specifiers = [[NSArray alloc] initWithArray:generateErrorSpecifiersWithText(errorText)];
+            _specifiers = [generateErrorSpecifiersWithText(errorText) mutableCopy];
         } else {
             if ([self respondsToSelector:@selector(setTitle:)]) {
                 [self setTitle:specifier.name];
@@ -173,7 +173,7 @@ static BOOL _Firmware_lt_60 = NO;
     if (!_specifiers) {
         PLLog(@"Generating error specifiers for a failed bundle :(");
         NSString *const errorText = [NSString stringWithFormat:@"There was an error loading the preference bundle for %@.", [[self specifier] name]];
-        _specifiers = [[NSArray alloc] initWithArray:generateErrorSpecifiersWithText(errorText)];
+        _specifiers = [generateErrorSpecifiersWithText(errorText) mutableCopy];
     }
     return _specifiers;
 }
