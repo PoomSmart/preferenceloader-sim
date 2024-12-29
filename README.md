@@ -2,14 +2,14 @@
 This project aims to make testing tweak settings bundle possible on iOS simulator. [simject](https://github.com/angelXwind/simject) is required and used by this project.
 
 ### Setting up simulator
-`make setup PL_SIMULATOR_VERSION=9.3` For instance, if you target iOS simulator 9.3
+`make setup PL_SIMULATOR_VERSION=15.0` For instance, if you target iOS simulator 15.0
 
 Or
 
 `make setup` if you specify the version in locatesim.mk
 
 ### Uninstallation
-`make remove PL_SIMULATOR_VERSION=9.3`
+`make remove PL_SIMULATOR_VERSION=15.0`
 
 Or
 

@@ -3,3 +3,4 @@ _
 .theos
 debs
 *.deb
+.DS_Store
