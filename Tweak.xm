@@ -1,4 +1,5 @@
 #import <substrate.h>
+#import <dlfcn.h>
 
 #import "prefs.h"
 
@@ -20,12 +21,14 @@ static NSString * *pPSTableCellUseEtchedAppearanceKey = NULL;
 static BOOL _Firmware_lt_60 = NO;
 /* }}} */
 
-%hook PrefsListController
 static NSMutableArray *_loadedSpecifiers = nil;
 static NSInteger _extraPrefsGroupSectionID = 0;
 
 /* {{{ iPad Hooks */
 %group iPad
+
+%hook PrefsListController
+
 - (NSString *)tableView:(UITableView *)view titleForHeaderInSection:(NSInteger)section {
     if ([_loadedSpecifiers count] == 0)
         return %orig;
@@ -44,6 +47,10 @@ static NSInteger _extraPrefsGroupSectionID = 0;
 
 %end
 /* }}} */
+
+%end
+
+%hook PrefsListController
 
 static NSInteger PSSpecifierSort(PSSpecifier *a1, PSSpecifier *a2, void *context) {
     NSString *string1 = [a1 name];
