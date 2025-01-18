@@ -1,6 +1,6 @@
 DEBUG = 1
-TARGET = simulator:clang:latest:8.0
-ARCHS = arm64
+TARGET = simulator:clang:17.2:8.0
+ARCHS = arm64 x86_64 i386
 # ARCHS = x86_64 i386 # for Intel Mac
 
 include $(THEOS)/makefiles/common.mk
