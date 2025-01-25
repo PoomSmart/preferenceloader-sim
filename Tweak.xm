@@ -62,19 +62,11 @@ static NSInteger PSSpecifierSort(PSSpecifier *a1, PSSpecifier *a2, void *context
         %orig;
         [_loadedSpecifiers release];
         _loadedSpecifiers = [[NSMutableArray alloc] init];
-        #if SIMULATOR
-        NSArray *subpaths = [[NSFileManager defaultManager] subpathsOfDirectoryAtPath:@"/opt/simject/PreferenceLoader/Preferences" error:NULL];
-        #else
-        NSArray *subpaths = [[NSFileManager defaultManager] subpathsOfDirectoryAtPath:@"/var/jb/Library/PreferenceLoader/Preferences" error:NULL];
-        #endif
+        NSArray *subpaths = [[NSFileManager defaultManager] subpathsOfDirectoryAtPath:_realPath2(@"/Library/PreferenceLoader/Preferences") error:NULL];
         for(NSString *item in subpaths) {
             if(![[item pathExtension] isEqualToString:@"plist"]) continue;
             PLLog(@"processing %@", item);
-            #if SIMULATOR
-            NSString *fullPath = [NSString stringWithFormat:@"/opt/simject/PreferenceLoader/Preferences/%@", item];
-            #else
-            NSString *fullPath = [NSString stringWithFormat:@"/var/jb/Library/PreferenceLoader/Preferences/%@", item];
-            #endif
+            NSString *fullPath = [NSString stringWithFormat:_realPath2(@"/Library/PreferenceLoader/Preferences/%@"), item];
             NSDictionary *plPlist = [NSDictionary dictionaryWithContentsOfFile:fullPath];
             if(![PSSpecifier environmentPassesPreferenceLoaderFilter:[plPlist objectForKey:@"filter"] ?: [plPlist objectForKey:PLFilterKey]]) continue;
 
