@@ -1,3 +1,4 @@
+#import <Preferences/Preferences.h>
 #import <substrate.h>
 #import <dlfcn.h>
 
@@ -8,7 +9,7 @@
 
 /* {{{ Imports (Preferences.framework) */
 // Weak (3.2+, dlsym)
-static NSString * *pPSTableCellUseEtchedAppearanceKey = NULL;
+static NSString **pPSTableCellUseEtchedAppearanceKey = NULL;
 /* }}} */
 
 /* {{{ UIDevice 3.2 Additions */
@@ -30,18 +31,14 @@ static NSInteger _extraPrefsGroupSectionID = 0;
 %hook PrefsListController
 
 - (NSString *)tableView:(UITableView *)view titleForHeaderInSection:(NSInteger)section {
-    if ([_loadedSpecifiers count] == 0)
-        return %orig;
-    if (section == _extraPrefsGroupSectionID)
-        return _Firmware_lt_60 ? @"Extensions" : NULL;
+    if([_loadedSpecifiers count] == 0) return %orig;
+    if(section == _extraPrefsGroupSectionID) return _Firmware_lt_60 ? @"Extensions" : NULL;
     return %orig;
 }
 
 - (CGFloat)tableView:(UITableView *)view heightForHeaderInSection:(NSInteger)section {
-    if ([_loadedSpecifiers count] == 0)
-        return %orig;
-    if (section == _extraPrefsGroupSectionID)
-        return _Firmware_lt_60 ? 22.0f : 10.f;
+    if([_loadedSpecifiers count] == 0) return %orig;
+    if(section == _extraPrefsGroupSectionID) return _Firmware_lt_60 ? 22.0f : 10.f;
     return %orig;
 }
 
@@ -60,37 +57,40 @@ static NSInteger PSSpecifierSort(PSSpecifier *a1, PSSpecifier *a2, void *context
 
 - (id)specifiers {
     bool first = (MSHookIvar<id>(self, "_specifiers") == nil);
-    if (first) {
+    if(first) {
         PLLog(@"initial invocation for -specifiers");
         %orig;
         [_loadedSpecifiers release];
         _loadedSpecifiers = [[NSMutableArray alloc] init];
-        NSArray *subpaths = [[NSFileManager defaultManager] subpathsOfDirectoryAtPath:_realPath2(@"/Library/PreferenceLoader/Preferences") error:NULL];
-        for (NSString *item in subpaths) {
-            if (![[item pathExtension] isEqualToString:@"plist"])
-                continue;
+        #if SIMULATOR
+        NSArray *subpaths = [[NSFileManager defaultManager] subpathsOfDirectoryAtPath:@"/opt/simject/PreferenceLoader/Preferences" error:NULL];
+        #else
+        NSArray *subpaths = [[NSFileManager defaultManager] subpathsOfDirectoryAtPath:@"/var/jb/Library/PreferenceLoader/Preferences" error:NULL];
+        #endif
+        for(NSString *item in subpaths) {
+            if(![[item pathExtension] isEqualToString:@"plist"]) continue;
             PLLog(@"processing %@", item);
-            NSString *fullPath = [NSString stringWithFormat:_realPath2(@"/Library/PreferenceLoader/Preferences/%@"), item];
+            #if SIMULATOR
+            NSString *fullPath = [NSString stringWithFormat:@"/opt/simject/PreferenceLoader/Preferences/%@", item];
+            #else
+            NSString *fullPath = [NSString stringWithFormat:@"/var/jb/Library/PreferenceLoader/Preferences/%@", item];
+            #endif
             NSDictionary *plPlist = [NSDictionary dictionaryWithContentsOfFile:fullPath];
-            if (![PSSpecifier environmentPassesPreferenceLoaderFilter:[plPlist objectForKey:@"filter"] ? : [plPlist objectForKey:PLFilterKey]])
-                continue;
+            if(![PSSpecifier environmentPassesPreferenceLoaderFilter:[plPlist objectForKey:@"filter"] ?: [plPlist objectForKey:PLFilterKey]]) continue;
 
             NSDictionary *entry = [plPlist objectForKey:@"entry"];
-            if (!entry)
-                continue;
+            if(!entry) continue;
             PLLog(@"found an entry key for %@!", item);
 
-            if (![PSSpecifier environmentPassesPreferenceLoaderFilter:[entry objectForKey:PLFilterKey]])
-                continue;
+            if(![PSSpecifier environmentPassesPreferenceLoaderFilter:[entry objectForKey:PLFilterKey]]) continue;
 
             NSArray *specs = [self specifiersFromEntry:entry sourcePreferenceLoaderBundlePath:[fullPath stringByDeletingLastPathComponent] title:[[item lastPathComponent] stringByDeletingPathExtension]];
-            if (!specs)
-                continue;
+            if(!specs) continue;
 
             // But it's possible for there to be more than one with an isController == 0 (PSBundleController) bundle.
             // so, set all the specifiers to etched mode (if necessary).
-            if (pPSTableCellUseEtchedAppearanceKey && [UIDevice instancesRespondToSelector:@selector(isWildcat)] && [[UIDevice currentDevice] isWildcat])
-                for (PSSpecifier *specifier in specs) {
+            if(pPSTableCellUseEtchedAppearanceKey && [UIDevice instancesRespondToSelector:@selector(isWildcat)] && [[UIDevice currentDevice] isWildcat])
+                for(PSSpecifier *specifier in specs) {
                     [specifier setProperty:[NSNumber numberWithBool:1] forKey:*pPSTableCellUseEtchedAppearanceKey];
                 }
 
@@ -100,11 +100,17 @@ static NSInteger PSSpecifierSort(PSSpecifier *a1, PSSpecifier *a2, void *context
 
         [_loadedSpecifiers sortUsingFunction:(NSInteger (*)(id, id, void *))&PSSpecifierSort context:NULL];
 
-        if ([_loadedSpecifiers count] > 0) {
+        if([_loadedSpecifiers count] > 0) {
             PLLog(@"so we gots us some specifiers! that's awesome! let's add them to the list...");
             PSSpecifier *groupSpecifier = [PSSpecifier groupSpecifierWithName:_Firmware_lt_60 ? @"Extensions" : nil];
             [_loadedSpecifiers insertObject:groupSpecifier atIndex:0];
             NSMutableArray *_specifiers = MSHookIvar<NSMutableArray *>(self, "_specifiers");
+            PLLog(@"_specifiers = %@", _specifiers);
+            // Log type
+            PLLog(@"_specifiers type = %s", class_getName([_specifiers class]));
+            if (@available(iOS 18.0, *)) {
+                _specifiers = [_specifiers mutableCopy];
+            }
             NSInteger group, row;
             NSInteger firstindex;
             if ([self getGroup:&group row:&row ofSpecifierID:_Firmware_lt_60 ? @"General" : @"TWITTER"]) {
@@ -116,13 +122,14 @@ static NSInteger PSSpecifierSort(PSSpecifier *a1, PSSpecifier *a2, void *context
             }
             NSIndexSet *indices = [NSIndexSet indexSetWithIndexesInRange:NSMakeRange(firstindex, [_loadedSpecifiers count])];
             [_specifiers insertObjects:_loadedSpecifiers atIndexes:indices];
+            if (@available(iOS 18.0, *)) {
+                MSHookIvar<id>(self, "_specifiers") = _specifiers;
+            }
             PLLog(@"getting group index");
             NSUInteger groupIndex = 0;
-            for (PSSpecifier *spec in _specifiers) {
-                if (MSHookIvar<NSInteger>(spec, "cellType") != PSGroupCell)
-                    continue;
-                if (spec == groupSpecifier)
-                    break;
+            for(PSSpecifier *spec in _specifiers) {
+                if(MSHookIvar<NSInteger>(spec, "cellType") != PSGroupCell) continue;
+                if(spec == groupSpecifier) break;
                 ++groupIndex;
             }
             _extraPrefsGroupSectionID = groupIndex;
@@ -139,15 +146,19 @@ static NSInteger PSSpecifierSort(PSSpecifier *a1, PSSpecifier *a2, void *context
     if (targetRootClass == Nil) {
         targetRootClass = objc_getClass("PrefsListController");
     }
+    if (targetRootClass == Nil) {
+        targetRootClass = objc_getClass("PSGGeneralController");
+    }
+    PLLog(@"targetRootClass = %s", class_getName(targetRootClass));
     %init(PrefsListController = targetRootClass);
 
     _Firmware_lt_60 = kCFCoreFoundationVersionNumber < 793.00;
-    if (([UIDevice instancesRespondToSelector:@selector(isWildcat)] && [[UIDevice currentDevice] isWildcat]) || (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad))
+    if(([UIDevice instancesRespondToSelector:@selector(isWildcat)] && [[UIDevice currentDevice] isWildcat]))
         %init(iPad);
 
-    void *preferencesHandle = dlopen(_realPath("/System/Library/PrivateFrameworks/Preferences.framework/Preferences"), RTLD_LAZY | RTLD_NOLOAD);
-    if (preferencesHandle) {
-        pPSTableCellUseEtchedAppearanceKey = (NSString * *)dlsym(preferencesHandle, "PSTableCellUseEtchedAppearanceKey");
+    void *preferencesHandle = dlopen("/System/Library/PrivateFrameworks/Preferences.framework/Preferences", RTLD_LAZY | RTLD_NOLOAD);
+    if(preferencesHandle) {
+        pPSTableCellUseEtchedAppearanceKey = (NSString **)dlsym(preferencesHandle, "PSTableCellUseEtchedAppearanceKey");
         dlclose(preferencesHandle);
     }
 }

@@ -19,8 +19,6 @@ extern NSString *const PLFilterKey;
 @interface PLLocalizedListController: PLCustomListController { }
 @end
 
-NSString *_realPath2(NSString *path) {
-  return [UISystemRootDirectory() stringByAppendingPathComponent: path];
-}
+#define _realPath2(path) [UISystemRootDirectory() stringByAppendingPathComponent:path]
 
 #define _realPath(path) ([_realPath2(@path) UTF8String])
